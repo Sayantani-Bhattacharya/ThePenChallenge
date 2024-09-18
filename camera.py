@@ -76,9 +76,9 @@ class RealSense():
         aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
         color_frame = aligned_frames.get_color_frame()
 
-        # Validate that both frames are valid
-        if not aligned_depth_frame or not color_frame:
-            self.cleanUp() # SEEEEEEEEEEEEEEEEEEEEEE
+        # # Validate that both frames are valid
+        # if not aligned_depth_frame or not color_frame:
+        #     self.cleanUp() # SEEEEEEEEEEEEEEEEEEEEEE
 
         # Final depth matrix: 480, 640.
         self.depth_image = np.asanyarray(aligned_depth_frame.get_data())
@@ -102,6 +102,7 @@ class RealSense():
         #   depth on right
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
         images = np.hstack((bg_removed, depth_colormap))
+
         # The images here is the superposition of bg_removed colourMap and depth value based heatMap.
         cv2.namedWindow('Align Example', cv2.WINDOW_NORMAL)
         cv2.imshow('Align Example', images)
@@ -118,45 +119,83 @@ if __name__ == "__main__":
     # Main loop
     RealSense1 = RealSense()
     try:
+        # Trackbar
+        Vmax = 255
+        Smax = 255
+        Hmax = 180
+
+        ########## Cite: gpt ############
+        def on_trackbar(x):
+            pass
+
+        ########## Cite: gpt ############ 
+
+                                                    
+        cv2.namedWindow("trackbar window")
+        cv2.createTrackbar("Hue_min", "trackbar window" , 0, Hmax, on_trackbar)
+        cv2.createTrackbar("Hue_max", "trackbar window" , 0, Hmax, on_trackbar)
+        cv2.createTrackbar("Value_min", "trackbar window" , 0, Vmax, on_trackbar)
+        cv2.createTrackbar("Value_max", "trackbar window" , 0, Vmax, on_trackbar)
+        cv2.createTrackbar("Saturation_min", "trackbar window" , 0, Smax, on_trackbar)
+        cv2.createTrackbar("Saturation_max", "trackbar window" , 0, Smax, on_trackbar) 
+
         while(True):   
             
             RealSense1.getFrames()
             bgRemoved = RealSense1.clippingBkg()    
             # RealSense1.record()   
-            RealSense1.render(bgRemoved) 
+            # RealSense1.render(bgRemoved)   
+            
+            # Load the img
+            depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(RealSense1.depth_image, alpha=0.03), cv2.COLORMAP_JET)
+            images = bgRemoved
+            # images = np.hstack((bgRemoved, depth_colormap))        
+            
+                       
 
+            # Get the position of the trackbar
+            threshold_valueA = cv2.getTrackbarPos("Hue_min", "trackbar window")
+            threshold_valueB = cv2.getTrackbarPos('Hue_max', 'trackbar window')
+            threshold_valueC = cv2.getTrackbarPos('Value_min', 'trackbar window')
+            threshold_valueD = cv2.getTrackbarPos('Value_max', 'trackbar window')
+            threshold_valueE = cv2.getTrackbarPos('Saturation_min', 'trackbar window')
+            threshold_valueF = cv2.getTrackbarPos('Saturation_max', 'trackbar window')
 
-            # Trackbar
+            # if ( threshold_valueA != 0):
+            #     print(threshold_valueA)
 
-            alpha_slider_max = 100            
-            ########## Cite: gpt ############
-            def on_trackbar(x):
-                pass
-            ########## Cite: gpt ############                                                
-            cv2.namedWindow("trackbar window")
-            HSV_min = 'Alpha x %d' % alpha_slider_max
-            cv2.createTrackbar(HSV_min, "trackbar window" , 0, alpha_slider_max, on_trackbar)
+            # Apply a binary threshold to the image
+            # _, thresholded_img = cv2.threshold(images, threshold_value, alpha_slider_max, cv2.THRESH_BINARY)
+            # Display the thresholded image
 
+            # Convert BGR to HSV
+            # cv.COLOR_BGR2HSV
+            hsv = cv2.cvtColor(images, cv2.COLOR_BGR2HSV)
+            minRange = np.array([threshold_valueA, threshold_valueE, threshold_valueC])
+            maxRange = np.array([threshold_valueB, threshold_valueF, threshold_valueD])           
 
-            while True:
+            # Threshold the HSV image to get only blue colors.
+            mask = cv2.inRange(hsv, minRange, maxRange)
+            # Bitwise-AND mask and original image
+            res = cv2.bitwise_and(images,images, mask= mask)
+            # res = cv2.bitwise_and(frame,frame, mask= mask)
+            
 
-                # Load the img
-                depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(RealSense1.depth_image, alpha=0.03), cv2.COLORMAP_JET)
-                images = np.hstack((bgRemoved, depth_colormap))           
-                # Get the position of the trackbar
-                threshold_value = cv2.getTrackbarPos('Threshold', 'trackbar window')
-                # Apply a binary threshold to the image
-                # _, thresholded_img = cv2.threshold(images, threshold_value, alpha_slider_max, cv2.THRESH_BINARY)
-                # Display the thresholded image
-                cv2.imshow('trackbar window', images)
-                on_trackbar(0)
-        
-                # To keep the GUI responsive
-                key = cv2.waitKey(1)
-                # Press esc or 'q' to close the image window
-                if key & 0xFF == ord('q') or key == 27:
-                    cv2.destroyAllWindows()
-                    break
+            # H1,h2,s1,s2,v1.v2   :  23, 176,  72, 130, 67, 255    ::   Tuned for purple pen.
+            cv2.imshow('res',res)
+            cv2.imshow('mask',mask)
+            cv2.imshow('trackbar window', images)
+            
+            
+
+            on_trackbar(0)
+    
+            # To keep the GUI responsive
+            key = cv2.waitKey(1)
+            # Press esc or 'q' to close the image window
+            if key & 0xFF == ord('q') or key == 27:
+                cv2.destroyAllWindows()
+                break
 
 
     finally:
