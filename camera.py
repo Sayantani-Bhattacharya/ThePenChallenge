@@ -44,10 +44,23 @@ class RealSense():
         # frames.get_depth_frame() is a 640x360 depth image
         self.allignFrames(frames)         
 
-    # def record(self):
-    # def playback():
-    # def depthImg(self):
-    # def colourImg(self):
+    def record(self):
+        # Stop the pipeline if it was already running
+        try:
+            # If the pipeline is already running, stop it
+            self.pipeline.stop()
+        except:
+            # Catch any exceptions related to stopping the pipeline if it wasn't running
+            pass
+
+        self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+        self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+        # Start streaming
+        profile = self.pipeline.start(self.config)    
+        self.config.enable_record_to_file("tempFile2.bag")
+
+    def playback(self):
+        self.config.enable_record_from_file("tempFile")
 
     def allignFrames(self, frames):
         # Create an align object
@@ -65,15 +78,12 @@ class RealSense():
 
         # Validate that both frames are valid
         if not aligned_depth_frame or not color_frame:
-            self.cleanUp()
-            # print("fnj")
-            #    SEEEEEEEEEEEEEEEEEEEEEE
+            self.cleanUp() # SEEEEEEEEEEEEEEEEEEEEEE
 
         # Final depth matrix: 480, 640.
         self.depth_image = np.asanyarray(aligned_depth_frame.get_data())
         # Final color matrix: 480, 640, 3.
         self.color_image = np.asanyarray(color_frame.get_data())      
-
 
     def clippingBkg(self):
         # Removing the background of objects more than clipping_distance_in_meters meters away.        
@@ -86,7 +96,6 @@ class RealSense():
         bg_removed = np.where((depth_image_3d > self.clipping_distance) | (depth_image_3d <= 0), grey_color, self.color_image)
         return bg_removed
           
-
     def render(self,bg_removed):
         # Render images:
         #   depth align to color on left
@@ -96,8 +105,7 @@ class RealSense():
         # The images here is the superposition of bg_removed colourMap and depth value based heatMap.
         cv2.namedWindow('Align Example', cv2.WINDOW_NORMAL)
         cv2.imshow('Align Example', images)
-
-
+        
 
     def cleanUp(self):
         # Stop the pipeline and cleanup.
@@ -113,13 +121,44 @@ if __name__ == "__main__":
         while(True):   
             
             RealSense1.getFrames()
-            bgRemoved = RealSense1.clippingBkg()           
-            RealSense1.render(bgRemoved)           
-            # To keep the GUI responsive
-            key = cv2.waitKey(1)
-            # Press esc or 'q' to close the image window
-            if key & 0xFF == ord('q') or key == 27:
-                cv2.destroyAllWindows()
+            bgRemoved = RealSense1.clippingBkg()    
+            # RealSense1.record()   
+            RealSense1.render(bgRemoved) 
+
+
+            # Trackbar
+
+            alpha_slider_max = 100            
+            ########## Cite: gpt ############
+            def on_trackbar(x):
+                pass
+            ########## Cite: gpt ############                                                
+            cv2.namedWindow("trackbar window")
+            HSV_min = 'Alpha x %d' % alpha_slider_max
+            cv2.createTrackbar(HSV_min, "trackbar window" , 0, alpha_slider_max, on_trackbar)
+
+
+            while True:
+
+                # Load the img
+                depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(RealSense1.depth_image, alpha=0.03), cv2.COLORMAP_JET)
+                images = np.hstack((bgRemoved, depth_colormap))           
+                # Get the position of the trackbar
+                threshold_value = cv2.getTrackbarPos('Threshold', 'trackbar window')
+                # Apply a binary threshold to the image
+                # _, thresholded_img = cv2.threshold(images, threshold_value, alpha_slider_max, cv2.THRESH_BINARY)
+                # Display the thresholded image
+                cv2.imshow('trackbar window', images)
+                on_trackbar(0)
+        
+                # To keep the GUI responsive
+                key = cv2.waitKey(1)
+                # Press esc or 'q' to close the image window
+                if key & 0xFF == ord('q') or key == 27:
+                    cv2.destroyAllWindows()
+                    break
+
+
     finally:
         RealSense1.cleanUp()
         
