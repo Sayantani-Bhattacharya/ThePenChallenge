@@ -25,8 +25,6 @@ class RealSense():
         if not found_rgb:
             print("The demo requires Depth camera with Color sensor")
             exit(0)      
-       
-    # def startStreaming(self):
 
         self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
         self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
@@ -127,7 +125,6 @@ if __name__ == "__main__":
         ########## Cite: gpt ############
         def on_trackbar(x):
             pass
-
         ########## Cite: gpt ############ 
 
                                                     
@@ -164,7 +161,6 @@ if __name__ == "__main__":
             # Display the thresholded image
 
             # Convert BGR to HSV
-            # cv.COLOR_BGR2HSV
             hsv = cv2.cvtColor(images, cv2.COLOR_BGR2HSV)
 
             # For HSV tuning.
@@ -172,28 +168,25 @@ if __name__ == "__main__":
             # maxRange = np.array([threshold_valueB, threshold_valueF, threshold_valueD])   
 
             # Tuned value:
-            minRange = np.array([23,72,67])
-            maxRange = np.array([176,130,255])
+            # minRange = np.array([23,72,67])
+            # maxRange = np.array([176,130,255])
+
+            minRange = np.array([95,37,68])
+            maxRange = np.array([142,173,255])
 
             # Threshold the HSV image to get only blue colors.
             mask = cv2.inRange(hsv, minRange, maxRange)
-            # Bitwise-AND mask and original image
-            res = cv2.bitwise_and(images,images, mask= mask)
-            
-
-            # cv2.imshow('res',res)
-            # cv2.imshow('mask',mask)
-            # cv2.imshow('trackbar window', images)          
-            # on_trackbar(0)
-
+            # Bitwise-AND mask and original image.
+            res = cv2.bitwise_and(images,images, mask= mask)  
 
             # Contouring
-            ret, thresh = cv2.threshold(mask, 127, 255, 0)
+            imgray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+            ret, thresh = cv2.threshold(imgray, 127, 255, 0)
             contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             # to draw the contours
             cv2.drawContours(res, contours, -1, (0,255,0), 3)
             # To calculate the centroid
-            if (len(contours[0])<=0):
+            if (len(contours)<=0):
                 continue
             else:
                 cnt = contours[0] 
@@ -204,7 +197,9 @@ if __name__ == "__main__":
             else:
                 cx = int(M['m10']/M['m00'])
                 cy = int(M['m01']/M['m00'])
-            cv2.circle(res, (cx, cy), 4, (0, 0, 255), -1)  # radius 4              
+            cv2.circle(res, (cx, cy), 4, (0, 0, 255), -1)  # radius 4 
+            
+                         
             cv2.imshow('res',res)
             cv2.imshow('mask',mask)
             cv2.imshow('trackbar window', images)          
@@ -217,7 +212,6 @@ if __name__ == "__main__":
             if key & 0xFF == ord('q') or key == 27:
                 cv2.destroyAllWindows()
                 break
-
 
     finally:
         RealSense1.cleanUp()
