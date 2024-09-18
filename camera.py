@@ -149,9 +149,7 @@ if __name__ == "__main__":
             # Load the img
             depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(RealSense1.depth_image, alpha=0.03), cv2.COLORMAP_JET)
             images = bgRemoved
-            # images = np.hstack((bgRemoved, depth_colormap))        
-            
-                       
+            # images = np.hstack((bgRemoved, depth_colormap))                                          
 
             # Get the position of the trackbar
             threshold_valueA = cv2.getTrackbarPos("Hue_min", "trackbar window")
@@ -160,7 +158,6 @@ if __name__ == "__main__":
             threshold_valueD = cv2.getTrackbarPos('Value_max', 'trackbar window')
             threshold_valueE = cv2.getTrackbarPos('Saturation_min', 'trackbar window')
             threshold_valueF = cv2.getTrackbarPos('Saturation_max', 'trackbar window')
-
 
             # Apply a binary threshold to the image
             # _, thresholded_img = cv2.threshold(images, threshold_value, alpha_slider_max, cv2.THRESH_BINARY)
@@ -184,10 +181,10 @@ if __name__ == "__main__":
             res = cv2.bitwise_and(images,images, mask= mask)
             
 
-            cv2.imshow('res',res)
-            cv2.imshow('mask',mask)
-            cv2.imshow('trackbar window', images)          
-            on_trackbar(0)
+            # cv2.imshow('res',res)
+            # cv2.imshow('mask',mask)
+            # cv2.imshow('trackbar window', images)          
+            # on_trackbar(0)
 
 
             # Contouring
@@ -195,8 +192,19 @@ if __name__ == "__main__":
             contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             # to draw the contours
             cv2.drawContours(res, contours, -1, (0,255,0), 3)
+            # To calculate the centroid
+            if (len(contours[0])<=0):
+                continue
+            else:
+                cnt = contours[0] 
 
-            
+            M = cv2.moments(cnt)
+            if (M['m00'] == 0):
+                continue
+            else:
+                cx = int(M['m10']/M['m00'])
+                cy = int(M['m01']/M['m00'])
+            cv2.circle(res, (cx, cy), 4, (0, 0, 255), -1)  # radius 4              
             cv2.imshow('res',res)
             cv2.imshow('mask',mask)
             cv2.imshow('trackbar window', images)          
