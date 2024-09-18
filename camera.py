@@ -161,8 +161,6 @@ if __name__ == "__main__":
             threshold_valueE = cv2.getTrackbarPos('Saturation_min', 'trackbar window')
             threshold_valueF = cv2.getTrackbarPos('Saturation_max', 'trackbar window')
 
-            # if ( threshold_valueA != 0):
-            #     print(threshold_valueA)
 
             # Apply a binary threshold to the image
             # _, thresholded_img = cv2.threshold(images, threshold_value, alpha_slider_max, cv2.THRESH_BINARY)
@@ -171,24 +169,39 @@ if __name__ == "__main__":
             # Convert BGR to HSV
             # cv.COLOR_BGR2HSV
             hsv = cv2.cvtColor(images, cv2.COLOR_BGR2HSV)
-            minRange = np.array([threshold_valueA, threshold_valueE, threshold_valueC])
-            maxRange = np.array([threshold_valueB, threshold_valueF, threshold_valueD])           
+
+            # For HSV tuning.
+            # minRange = np.array([threshold_valueA, threshold_valueE, threshold_valueC])
+            # maxRange = np.array([threshold_valueB, threshold_valueF, threshold_valueD])   
+
+            # Tuned value:
+            minRange = np.array([23,72,67])
+            maxRange = np.array([176,130,255])
 
             # Threshold the HSV image to get only blue colors.
             mask = cv2.inRange(hsv, minRange, maxRange)
             # Bitwise-AND mask and original image
             res = cv2.bitwise_and(images,images, mask= mask)
-            # res = cv2.bitwise_and(frame,frame, mask= mask)
             
 
-            # H1,h2,s1,s2,v1.v2   :  23, 176,  72, 130, 67, 255    ::   Tuned for purple pen.
             cv2.imshow('res',res)
             cv2.imshow('mask',mask)
-            cv2.imshow('trackbar window', images)
-            
-            
-
+            cv2.imshow('trackbar window', images)          
             on_trackbar(0)
+
+
+            # Contouring
+            ret, thresh = cv2.threshold(mask, 127, 255, 0)
+            contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            # to draw the contours
+            cv2.drawContours(res, contours, -1, (0,255,0), 3)
+
+            
+            cv2.imshow('res',res)
+            cv2.imshow('mask',mask)
+            cv2.imshow('trackbar window', images)          
+            on_trackbar(0)
+
     
             # To keep the GUI responsive
             key = cv2.waitKey(1)
