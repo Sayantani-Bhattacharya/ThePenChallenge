@@ -1,6 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
+import time
 
 class RealSense():
 
@@ -30,9 +31,9 @@ class RealSense():
         self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 
         # Start streaming
-        profile = self.pipeline.start(self.config)
+        self.profile = self.pipeline.start(self.config)
         # Calc the depth sensor's depth scale.
-        depth_sensor = profile.get_device().first_depth_sensor()
+        depth_sensor = self.profile.get_device().first_depth_sensor()
         self.depth_scale = depth_sensor.get_depth_scale()
         print("Depth Scale is: " , self.depth_scale)
 
@@ -54,6 +55,7 @@ class RealSense():
         self.config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
         self.config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
         # Start streaming
+        # Consider using the member var profile and not starting pipeline again from here.
         profile = self.pipeline.start(self.config)    
         self.config.enable_record_to_file("tempFile2.bag")
 
@@ -71,7 +73,7 @@ class RealSense():
         aligned_frames = align.process(frames)
 
         # Get aligned frames
-        aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
+        self.aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
         color_frame = aligned_frames.get_color_frame()
 
         # # Validate that both frames are valid
@@ -79,14 +81,14 @@ class RealSense():
         #     self.cleanUp() # SEEEEEEEEEEEEEEEEEEEEEE
 
         # Final depth matrix: 480, 640.
-        self.depth_image = np.asanyarray(aligned_depth_frame.get_data())
+        self.depth_image = np.asanyarray(self.aligned_depth_frame.get_data())
         # Final color matrix: 480, 640, 3.
         self.color_image = np.asanyarray(color_frame.get_data())      
 
     def clippingBkg(self):
         # Removing the background of objects more than clipping_distance_in_meters meters away.        
         # Calc the clipping distance depth scale
-        self.clipping_distance_in_meters = 1 #1 meter
+        self.clipping_distance_in_meters = 0.3 #1 meter
         self.clipping_distance = self.clipping_distance_in_meters / self.depth_scale
         # Remove background - Set pixels further than clipping_distance to grey
         grey_color = 153
@@ -136,6 +138,7 @@ if __name__ == "__main__":
         cv2.createTrackbar("Saturation_min", "trackbar window" , 0, Smax, on_trackbar)
         cv2.createTrackbar("Saturation_max", "trackbar window" , 0, Smax, on_trackbar) 
 
+        startPublishLoop = time.time()
         while(True):   
             
             RealSense1.getFrames()
@@ -179,6 +182,7 @@ if __name__ == "__main__":
             # Bitwise-AND mask and original image.
             res = cv2.bitwise_and(images,images, mask= mask)  
 
+            # For better accuracy, use binary images. So before finding contours, apply threshold or canny edge detection.
             # Contouring
             imgray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
             ret, thresh = cv2.threshold(imgray, 127, 255, 0)
@@ -199,7 +203,44 @@ if __name__ == "__main__":
                 cy = int(M['m01']/M['m00'])
             cv2.circle(res, (cx, cy), 4, (0, 0, 255), -1)  # radius 4 
             
+            
+
+
+            # Depth calculation and filtering.
+            # Intrintic info.  
+            profileOth = RealSense1.profile.get_stream(rs.stream.color)
+            intr = profileOth.as_video_stream_profile().get_intrinsics()
+            # convert pixel to point
+            # find the depth vallue from depth_map
+            
+            # RealSense1.depth_image
+            depth = RealSense1.aligned_depth_frame.get_distance(cx,cy) # for this to work needs the alligned frame func to be called.
+            # depth : is the real world image.
+            # camera_coordinate.clear()
+            camera_coordinate = rs.rs2_deproject_pixel_to_point(intr, [cx, cy], depth)
+            # z_coordinate = RealSense1.depth_image[cx][cy]
+
+            # Publish once a minite
+            endPublishLoop = time.time()
+            if (endPublishLoop - startPublishLoop >= 10):            
+                
+                print("camera_coordinate")
+                print(camera_coordinate)
+
+                # Add text for centroid.
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(res,f"({camera_coordinate[0]},{camera_coordinate[1]}, {camera_coordinate[2]})",(10,400), font, 1,(255,255,255), 1, cv2.LINE_AA)
+
+                # Save detected coordinates in Rabot frame to a flie.
+                file_path = 'penDetectionCord.txt'
+                ################# Citation : Gpt ##################
+                with open(file_path, "w") as file:
+                    file.write(",".join(map(str, camera_coordinate)))
+                ################# Gpt ##################
+
+                startPublishLoop = time.time()
                          
+
             cv2.imshow('res',res)
             cv2.imshow('mask',mask)
             cv2.imshow('trackbar window', images)          
