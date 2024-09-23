@@ -138,7 +138,7 @@ if __name__ == "__main__":
         cv2.createTrackbar("Saturation_min", "trackbar window" , 0, Smax, on_trackbar)
         cv2.createTrackbar("Saturation_max", "trackbar window" , 0, Smax, on_trackbar) 
 
-        startPublishLoop = time.time()
+        # startPublishLoop = time.time()
         while(True):   
             
             RealSense1.getFrames()
@@ -221,24 +221,24 @@ if __name__ == "__main__":
             # z_coordinate = RealSense1.depth_image[cx][cy]
 
             # Publish once a minite
-            endPublishLoop = time.time()
-            if (endPublishLoop - startPublishLoop >= 10):            
+            # endPublishLoop = time.time()
+            # if (endPublishLoop - startPublishLoop >= 10):            
                 
-                print("camera_coordinate")
-                print(camera_coordinate)
+            print("camera_coordinate")
+            print(camera_coordinate)
 
-                # Add text for centroid.
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(res,f"({camera_coordinate[0]},{camera_coordinate[1]}, {camera_coordinate[2]})",(10,400), font, 1,(255,255,255), 1, cv2.LINE_AA)
+                # # Add text for centroid.
+                # font = cv2.FONT_HERSHEY_SIMPLEX
+                # cv2.putText(res,f"({camera_coordinate[0]},{camera_coordinate[1]}, {camera_coordinate[2]})",(10,400), font, 1,(255,255,255), 1, cv2.LINE_AA)
 
-                # Save detected coordinates in Rabot frame to a flie.
-                file_path = 'penDetectionCord.txt'
-                ################# Citation : Gpt ##################
-                with open(file_path, "w") as file:
-                    file.write(",".join(map(str, camera_coordinate)))
-                ################# Gpt ##################
+                # # Save detected coordinates in Rabot frame to a flie.
+                # file_path = 'penDetectionCord.txt'
+                # ################# Citation : Gpt ##################
+                # with open(file_path, "w") as file:
+                #     file.write(",".join(map(str, camera_coordinate)))
+                # ################# Gpt ##################
 
-                startPublishLoop = time.time()
+                # startPublishLoop = time.time()
                          
 
             cv2.imshow('res',res)
